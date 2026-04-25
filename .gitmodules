@@ -1,0 +1,6 @@
+[submodule "board"]
+	path = board
+	url = https://github.com/WPI-HPRC/mars-board-definitions.git
+[submodule "lib/LoRaE22"]
+	path = lib/LoRaE22
+	url = https://github.com/WPI-HPRC/LoRaE22.git
