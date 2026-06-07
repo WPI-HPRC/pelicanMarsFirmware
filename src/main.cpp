@@ -3,12 +3,22 @@
 #include <HardwareSerial.h>
 #include <SPI.h>
 
+#if defined(MARSv20) || defined(MARSv21)
 SPIClass SENSORS_SPI(SENSORS_SPI_MOSI, SENSORS_SPI_MISO, SENSORS_SPI_SCK);
 TwoWire GPS_I2C(GPS_I2C_SDA, GPS_I2C_SCL);
 HardwareSerial GPS_SERIAL(GPS_SERIAL_RX, GPS_SERIAL_TX);
 TwoWire CONNECTOR_I2C(CONNECTOR_I2C_SDA, CONNECTOR_I2C_SCL);
 SPIClass CAMERA_SPI(CAMERA_MOSI, CAMERA_MISO, CAMERA_SCK);
 HardwareSerial RADIO_SERIAL(RADIO_SERIAL_RX, RADIO_SERIAL_TX);
+#define MARS
+#else
+#define LED_POLARIS (6)
+#define RADIO_SERIAL Serial2
+#define RADIO_M0 21
+#define RADIO_M1 20
+#define RADIO_AUX 24
+#define POLARIS
+#endif
 
 #include "LoRaE22.h"
 #include "RadioConfigs.h"
@@ -68,10 +78,15 @@ unsigned long blinkTimer;
 
 
 void setup() {
-  SerialUSB.begin(); while(!SerialUSB.available()){};
+  SerialUSB.begin(921600); while(!SerialUSB){};
+  #ifdef MARS
   pinMode(LED_BLUE, OUTPUT); digitalWrite(LED_BLUE, HIGH);
   pinMode(LED_GREEN, OUTPUT); digitalWrite(LED_GREEN, LOW);
   pinMode(LED_RED, OUTPUT); digitalWrite(LED_RED, LOW);
+  #else
+  pinMode(LED_POLARIS, OUTPUT); digitalWrite(LED_POLARIS, LOW);
+  pinMode(LED_BUILTIN, OUTPUT); digitalWrite(LED_BUILTIN, LOW);
+  #endif
 
   radioInit();
   blinkTimer = millis();
@@ -81,14 +96,26 @@ void setup() {
 void loop() {
   if(RADIO_SERIAL.available() > 0){
     SerialUSB.write(RADIO_SERIAL.read());
+    #ifdef MARS
     digitalToggle(LED_GREEN);
+    #else
+    digitalToggle(LED_POLARIS);
+    #endif
   }
   if(SerialUSB.available() > 0){
     RADIO_SERIAL.write(SerialUSB.read());
+    #ifdef MARS
     digitalToggle(LED_GREEN);
+    #else
+    digitalToggle(LED_POLARIS);
+    #endif
   }
   if(millis() - blinkTimer > 500){
+    #ifdef MARS
     digitalToggle(LED_BLUE);
+    #else
+    digitalToggle(LED_BUILTIN);
+    #endif
     blinkTimer = millis();
   }
 }
@@ -130,8 +157,14 @@ void radioInit(){
 
   int8_t code = radioModule.init(3);
   radioModule.setMode(RadioMode::Normal);
+  #ifdef MARS
   if(code < 0){digitalWrite(LED_RED, HIGH);}
   else{digitalWrite(LED_GREEN, HIGH);}
+  #else
+  if(code < 0){digitalWrite(LED_POLARIS, HIGH);}
+  else{digitalWrite(LED_BUILTIN, HIGH);}
+
+  #endif
 
   #ifdef RADIO_DEBUG
     SerialUSB.println("done initing");
